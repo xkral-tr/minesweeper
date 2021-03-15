@@ -7,7 +7,7 @@ pygame.init()
 
 screen = pygame.display.set_mode((640, 480))
 
-MINE_COUNT = 10
+MINE_COUNT = 40
 TILE_X = 16
 TILE_Y = 12
 FPS = 120
@@ -15,13 +15,17 @@ TILE_SIZE = 40
 MINE_INDICATOR = -1
 TITLE = "minesweeper"
 GAME_OVER = False
+WON = False
 
+# Tile States
 INVISIBLE = 0
 VISIBLE = 1
 FLAGGED = 2
 
 pygame.display.set_caption(TITLE)
 
+
+found_mines_count = 0
 first_tile = True
 
 tiles = np.zeros((TILE_Y, TILE_X), dtype="int")
@@ -51,33 +55,34 @@ def increase_neighbors(x, y):
     # Cross
     if x > 0 and y < TILE_Y-1 and tiles[y+1][x-1] != MINE_INDICATOR:
         tiles[y+1][x-1] += 1
-    if x < TILE_Y - 1 and y < TILE_Y-1 and tiles[y+1][x+1] != MINE_INDICATOR:
-        tiles[y+1][x+1] += 1
     if x > 0 and y > 0 and tiles[y-1][x-1] != MINE_INDICATOR:
         tiles[y-1][x-1] += 1
-    if x < TILE_Y - 1 and y > 0 and tiles[y-1][x+1] != MINE_INDICATOR:
+    if x < TILE_X - 1 and y < TILE_Y-1 and tiles[y+1][x+1] != MINE_INDICATOR:
+        tiles[y+1][x+1] += 1
+    if x < TILE_X - 1 and y > 0 and tiles[y-1][x+1] != MINE_INDICATOR:
         tiles[y-1][x+1] += 1
 
 
-def check_random_collide(x, y):
+def check_random_collide(x, y, first_pos):
 
-    if tiles[y, x] == MINE_INDICATOR:
+    if tiles[y, x] == MINE_INDICATOR or first_pos == (x, y):
         x = random.randint(0, TILE_X - 1)
         y = random.randint(0, TILE_Y - 1)
         # print("a:", x, y)
-        return check_random_collide(x, y)
+        return check_random_collide(x, y, first_pos)
     else:
         return (x, y)
 
 
-def replace_mines():
+def replace_mines(first_pos):
     if first_tile:
         for _ in range(MINE_COUNT):
             random_x = random.randint(0, TILE_X - 1)
             random_y = random.randint(0, TILE_Y - 1)
 
             # print(random_x, random_y)
-            random_x, random_y = check_random_collide(random_x, random_y)
+            random_x, random_y = check_random_collide(
+                random_x, random_y, first_pos)
 
             # mine_locations[mine_location] = [random_x, random_y]
             tiles[random_y][random_x] = MINE_INDICATOR
@@ -86,22 +91,32 @@ def replace_mines():
 
 clock = pygame.time.Clock()
 
+right_mouse_clicked = False
+
 running = True
 while running:
     clock.tick(FPS)
 
     # Print FPS
     # print(clock.get_fps())
+    event = pygame.event.poll()
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    if event.type == pygame.QUIT:
+        running = False
 
     screen.fill(0)
 
+    # print(event)
     # draw_tiles()
 
-    if not GAME_OVER:
+    # print(found_mines_count)
+    # Set Won State
+    flag_count = np.count_nonzero(tile_toggles == 2)
+    # print(flag_count)
+    if found_mines_count == MINE_COUNT and flag_count == MINE_COUNT:
+        WON = True
+
+    if not GAME_OVER and not WON:
         for y in range(TILE_Y):
             for x in range(TILE_X):
 
@@ -113,7 +128,7 @@ while running:
                     # Clicked Left Mouse Button
                     # Show tile
                     if pygame.mouse.get_pressed(3)[0]:
-                        replace_mines()
+                        replace_mines((x, y))
                         first_tile = False
                         tile_toggles[y][x] = VISIBLE
                         # Set Game Over State
@@ -122,16 +137,34 @@ while running:
                             # print(tile_toggles)
                             GAME_OVER = True
 
+                        # Flood Fill
+                        if tiles[y][x] == 0:
+                            for _y in range(TILE_Y):
+                                for _x in range(TILE_X):
+                                    if tiles[_y][_x] != MINE_INDICATOR:
+                                        tile_toggles[_y][_x] = VISIBLE
+
                     # Clicked Right Mouse Button
                     # Add Flag
-                    if pygame.mouse.get_pressed(3)[2]:
-                        print("Right Click!")
-                        replace_mines()
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+                        # print("Right Click!")
+                        replace_mines((x, y))
                         first_tile = False
                         # If tile is not revealed
                         # Then add a flag
-                        if tile_toggles[y][x] != VISIBLE:
+                        # Or remove flag
+                        if tile_toggles[y][x] == INVISIBLE:
+                            # Found mine
                             tile_toggles[y][x] = FLAGGED
+
+                            if tiles[y][x] == MINE_INDICATOR:
+                                found_mines_count += 1
+
+                        elif tile_toggles[y][x] == FLAGGED:
+                            tile_toggles[y][x] = INVISIBLE
+
+                            if tiles[y][x] == MINE_INDICATOR:
+                                found_mines_count -= 1
 
                 if tile_toggles[y][x] == INVISIBLE:
                     pygame.draw.rect(screen, (100, 100, 100), tile_rect)
@@ -163,11 +196,21 @@ while running:
                     screen.blit(flag_sprite, flag_rect)
 
     else:
-        print("Game over")
-        game_over = font.render("Game Over", True, (255, 255, 255))
+        if GAME_OVER:
+            _text = "Game Over"
+
+        elif WON:
+            _text = "You won"
+        game_over = font.render(_text, True, (255, 255, 255))
         game_over_rect = game_over.get_rect()
         game_over_rect.center = (320,  240)
         screen.blit(game_over, game_over_rect)
 
     # first_tile = False
+    if pygame.key.get_pressed()[pygame.K_a]:
+        tile_toggles[tile_toggles == 0] = 1
+
+    if pygame.key.get_pressed()[pygame.K_d]:
+        tile_toggles[tile_toggles == 1] = 0
+
     pygame.display.flip()
