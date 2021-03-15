@@ -23,8 +23,10 @@ tiles = np.zeros((TILE_Y, TILE_X), dtype="int")
 tile_toggles = np.zeros((TILE_Y, TILE_X), dtype="int")
 
 font = pygame.font.SysFont("Arial", 20)
+
 # Load Assets
-# HERE
+mine_sprite = pygame.image.load("assets/mine.png")
+mine_sprite = pygame.transform.scale(mine_sprite, (TILE_SIZE, TILE_SIZE))
 
 clock = pygame.time.Clock()
 
@@ -75,7 +77,7 @@ while running:
     clock.tick(FPS)
 
     # Print FPS
-    print(clock.get_fps())
+    # print(clock.get_fps())
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -92,7 +94,7 @@ while running:
                 x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
             # Tile Collision Detection
-            if tile_rect.collidepoint(pygame.mouse.get_pos()):
+            if tile_rect.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed(3)[0]:
                 tile_toggles[y][x] = 1
 
             if tile_toggles[y][x] == 0:
@@ -113,6 +115,8 @@ while running:
 
                 # Tile is mine
                 if tiles[y][x] == -1:
-                    pass
+                    mine_sprite_rect = mine_sprite.get_rect()
+                    mine_sprite_rect.center = tile_rect.center
+                    screen.blit(mine_sprite, mine_sprite_rect)
 
     pygame.display.flip()
