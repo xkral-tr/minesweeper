@@ -41,6 +41,16 @@ def increase_neighbors(x, y):
     if y < TILE_Y - 1 and tiles[y+1][x] != MINE_INDICATOR:
         tiles[y+1][x] += 1
 
+    # Cross
+    if x > 0 and y < TILE_Y-1 and tiles[y+1][x-1] != MINE_INDICATOR:
+        tiles[y+1][x-1] += 1
+    if x < TILE_Y - 1 and y < TILE_Y-1 and tiles[y+1][x+1] != MINE_INDICATOR:
+        tiles[y+1][x+1] += 1
+    if x > 0 and y > 0 and tiles[y-1][x-1] != MINE_INDICATOR:
+        tiles[y-1][x-1] += 1
+    if x < TILE_Y - 1 and y > 0 and tiles[y-1][x+1] != MINE_INDICATOR:
+        tiles[y-1][x+1] += 1
+
 
 def check_random_collide(x, y):
 
