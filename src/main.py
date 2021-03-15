@@ -13,10 +13,14 @@ TILE_Y = 12
 FPS = 120
 TILE_SIZE = 40
 MINE_INDICATOR = -1
+TITLE = "minesweeper"
+
+pygame.display.set_caption(TITLE)
 
 first_tile = True
 
 tiles = np.zeros((TILE_Y, TILE_X), dtype="int")
+tile_toggles = np.zeros((TILE_Y, TILE_X), dtype="int")
 
 font = pygame.font.SysFont("Arial", 20)
 # Load Assets
@@ -26,19 +30,19 @@ clock = pygame.time.Clock()
 
 
 def increase_neighbors(x, y):
-    if x > 0 and tiles[y][x-1] != -1:
+    if x > 0 and tiles[y][x-1] != MINE_INDICATOR:
         tiles[y][x - 1] += 1
-    if y > 0 and tiles[y-1][x] != -1:
+    if y > 0 and tiles[y-1][x] != MINE_INDICATOR:
         tiles[y - 1][x] += 1
-    if x < TILE_X - 1 and tiles[y][x+1] != -1:
+    if x < TILE_X - 1 and tiles[y][x+1] != MINE_INDICATOR:
         tiles[y][x+1] += 1
-    if y < TILE_Y - 1 and tiles[y+1][x] != -1:
+    if y < TILE_Y - 1 and tiles[y+1][x] != MINE_INDICATOR:
         tiles[y+1][x] += 1
 
 
 def check_random_collide(x, y):
 
-    if tiles[y, x] == -1:
+    if tiles[y, x] == MINE_INDICATOR:
         x = random.randint(0, TILE_X - 1)
         y = random.randint(0, TILE_Y - 1)
         # print("a:", x, y)
@@ -49,9 +53,7 @@ def check_random_collide(x, y):
 
 def replace_mines():
     if first_tile:
-        mine_locations = np.zeros((MINE_COUNT, 2), dtype="int")
-
-        for mine_location in range(MINE_COUNT):
+        for _ in range(MINE_COUNT):
             random_x = random.randint(0, TILE_X - 1)
             random_y = random.randint(0, TILE_Y - 1)
 
@@ -85,22 +87,32 @@ while running:
 
     for y in range(TILE_Y):
         for x in range(TILE_X):
+
             tile_rect = pygame.Rect(
                 x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-            if tiles[y][x] == -1:
-                thickness = 0
+            # Tile Collision Detection
+            if tile_rect.collidepoint(pygame.mouse.get_pos()):
+                tile_toggles[y][x] = 1
+
+            if tile_toggles[y][x] == 0:
+                pygame.draw.rect(screen, (100, 100, 100), tile_rect)
+                pygame.draw.rect(screen, (0, 0, 0), tile_rect, 1)
             else:
-                thickness = 1
+                pygame.draw.rect(screen, (100, 100, 100), tile_rect, 1)
 
-            pygame.draw.rect(screen, (100, 100, 100), tile_rect, thickness)
+                # Tile is not mine
+                if tiles[y][x] > 0:
+                    # Draw Mine Count
+                    mine_count_text = font.render(
+                        str(tiles[y][x]), True, (255, 255, 255))
+                    mine_count_rect = mine_count_text.get_rect(
+                        center=tile_rect.center)
 
-            if tiles[y][x] != 0 and tiles[y][x] != -1:
-                # Draw Mine Count
-                mine_count_text = font.render(
-                    str(tiles[y][x]), True, (255, 255, 255))
-                mine_count_rect = mine_count_text.get_rect(
-                    center=tile_rect.center)
+                    screen.blit(mine_count_text, mine_count_rect)
 
-                screen.blit(mine_count_text, mine_count_rect)
+                # Tile is mine
+                if tiles[y][x] == -1:
+                    pass
+
     pygame.display.flip()
