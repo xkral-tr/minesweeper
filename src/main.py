@@ -7,7 +7,7 @@ pygame.init()
 
 screen = pygame.display.set_mode((640, 480))
 
-MINE_COUNT = 40
+MINE_COUNT = 50
 TILE_X = 16
 TILE_Y = 12
 FPS = 120
@@ -16,6 +16,8 @@ MINE_INDICATOR = -1
 TITLE = "minesweeper"
 GAME_OVER = False
 WON = False
+LEFT_CLICK = 1
+RIGHT_CLICK = 3
 
 # Tile States
 INVISIBLE = 0
@@ -91,7 +93,28 @@ def replace_mines(first_pos):
 
 clock = pygame.time.Clock()
 
-right_mouse_clicked = False
+
+def flood_fill(x, y):
+
+    if x >= 0 or x <= TILE_X - 1 or y >= 0 or y <= TILE_Y - 1:
+        if tiles[y][x] != MINE_INDICATOR and tile_toggles[y][x] != VISIBLE:
+
+            tile_toggles[y][x] = VISIBLE
+            if x > 0:
+                # tile_toggles[y][x-1] = VISIBLE
+                flood_fill(x-1, y)
+            if x < TILE_X - 1:
+                # tile_toggles[y][x+1] = VISIBLE
+                flood_fill(x+1, y)
+
+            if y > 0:
+                # tile_toggles[y-1][x] = VISIBLE
+                flood_fill(x, y-1)
+
+            if y < TILE_Y - 1:
+                # tile_toggles[y+1][x] = VISIBLE
+                flood_fill(x, y+1)
+
 
 running = True
 while running:
@@ -127,26 +150,24 @@ while running:
                 if tile_rect.collidepoint(pygame.mouse.get_pos()):
                     # Clicked Left Mouse Button
                     # Show tile
-                    if pygame.mouse.get_pressed(3)[0]:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == LEFT_CLICK:
                         replace_mines((x, y))
                         first_tile = False
+
+                        if tiles[y][x] == 0:
+                            flood_fill(x, y)
+
                         tile_toggles[y][x] = VISIBLE
+
                         # Set Game Over State
                         if tiles[y][x] == MINE_INDICATOR:
                             # tile_toggles[tile_toggles == 0] = 1
                             # print(tile_toggles)
                             GAME_OVER = True
 
-                        # Flood Fill
-                        if tiles[y][x] == 0:
-                            for _y in range(TILE_Y):
-                                for _x in range(TILE_X):
-                                    if tiles[_y][_x] != MINE_INDICATOR:
-                                        tile_toggles[_y][_x] = VISIBLE
-
                     # Clicked Right Mouse Button
                     # Add Flag
-                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == RIGHT_CLICK:
                         # print("Right Click!")
                         replace_mines((x, y))
                         first_tile = False
