@@ -1,0 +1,4 @@
+build/
+dist/
+minesweeper.spec
+__pycache__
